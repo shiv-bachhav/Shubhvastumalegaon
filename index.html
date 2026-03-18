@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shubh Vastu</title>
+
+<style>
+body {margin:0; font-family:Arial; background:#f5f5f5;}
+header {background:#111; color:#fff; text-align:center; padding:15px;}
+
+.nav {display:flex; justify-content:center; gap:10px; margin-top:10px;}
+.nav button {background:#fff; color:#111; padding:8px 12px; border-radius:5px; border:none;}
+
+.slider img {width:100%; height:220px; object-fit:cover;}
+
+.container {padding:15px;}
+
+.card {background:#fff; padding:12px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+.gallery img {width:100%; margin-top:5px; border-radius:8px;}
+
+button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px; margin-top:5px;}
+
+input, textarea {width:100%; padding:10px; margin:5px 0;}
+
+.hidden {display:none;}
+
+.whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%;}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>Shubh Vastu</h2>
+<p>Dipak Waman Bachhav | 7020253407</p>
+
+<div class="nav">
+<button onclick="showPage('buyer')">Buyer</button>
+<button onclick="showPage('seller')">Seller</button>
+<button onclick="adminLogin()">Admin</button>
+</div>
+</header>
+
+<div class="slider">
+<img id="slide">
+</div>
+
+<div class="container">
+
+<!-- BUYER -->
+<div id="buyerPage">
+<h3>Buy Property</h3>
+<div id="properties"></div>
+</div>
+
+<!-- SELLER -->
+<div id="sellerPage" class="hidden">
+<h3>Sell Property</h3>
+<input id="title" placeholder="Property Title">
+<input id="price" placeholder="Price">
+<input id="location" placeholder="Location">
+<textarea id="desc" placeholder="Description"></textarea>
+
+<input id="sellerName" placeholder="Seller Name">
+<input id="sellerNumber" placeholder="Seller Phone Number">
+
+<input type="file" id="images" multiple>
+
+<button onclick="addProperty()">Submit Property</button>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPanel" class="hidden">
+<h3>Admin Panel (Seller details visible only here)</h3>
+<div id="adminList"></div>
+</div>
+
+</div>
+
+<a class="whatsapp" href="https://wa.me/917020253407">W</a>
+
+<script>
+
+// PAGE SWITCH
+function showPage(page){
+buyerPage.classList.add("hidden");
+sellerPage.classList.add("hidden");
+
+if(page==="buyer") buyerPage.classList.remove("hidden");
+if(page==="seller") sellerPage.classList.remove("hidden");
+}
+
+// SLIDER IMAGES
+let sliderImgs = [
+"https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+"https://images.unsplash.com/photo-1570129477492-45c003edd2be",
+"https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"
+];
+
+let i=0;
+setInterval(()=>{
+slide.src = sliderImgs[i];
+i=(i+1)%sliderImgs.length;
+},2000);
+
+// SAMPLE DATA (flat, plot, office, farm)
+let propertiesData = [
+{
+title:"Modern Flat",
+price:"₹30,00,000",
+location:"Pune",
+desc:"2BHK modern flat",
+images:["https://images.unsplash.com/photo-1507089947368-19c1da9775ae"]
+},
+{
+title:"Open Plot",
+price:"₹15,00,000",
+location:"Nashik",
+desc:"Good investment plot",
+images:["https://images.unsplash.com/photo-1501785888041-af3ef285b470"]
+},
+{
+title:"Office Space",
+price:"₹60,00,000",
+location:"Mumbai",
+desc:"Commercial office",
+images:["https://images.unsplash.com/photo-1497366754035-f200968a6e72"]
+},
+{
+title:"Farm Land",
+price:"₹20,00,000",
+location:"Ahmednagar",
+desc:"Green farm land",
+images:["https://images.unsplash.com/photo-1500382017468-9049fed747ef"]
+}
+];
+
+// ADD PROPERTY
+function addProperty(){
+let files = document.getElementById("images").files;
+let imgs=[];
+
+for(let f of files){
+imgs.push(URL.createObjectURL(f));
+}
+
+let p = {
+title:title.value,
+price:price.value,
+location:location.value,
+desc:desc.value,
+sellerName:sellerName.value,
+sellerNumber:sellerNumber.value,
+images:imgs
+};
+
+propertiesData.push(p);
+display();
+alert("Property Added!");
+}
+
+// DISPLAY
+function display(){
+let html="";
+
+propertiesData.forEach((p,i)=>{
+html+=`
+<div class="card">
+<h4>${p.title}</h4>
+<p>${p.price}</p>
+<p>${p.location}</p>
+<p>${p.desc}</p>
+
+<div class="gallery">
+${p.images.map(img=>`<img src="${img}">`).join("")}
+</div>
+
+<button onclick="contact()">Contact Broker</button>
+</div>`;
+});
+
+document.getElementById("properties").innerHTML = html;
+
+// ADMIN VIEW (seller details visible)
+let adminHTML="";
+
+propertiesData.forEach((p,i)=>{
+adminHTML+=`
+<div class="card">
+<h4>${p.title}</h4>
+<p>Seller: ${p.sellerName || "-"}</p>
+<p>Phone: ${p.sellerNumber || "-"}</p>
+<button onclick="deleteProp(${i})">Delete</button>
+</div>`;
+});
+
+adminList.innerHTML = adminHTML;
+}
+
+// DELETE
+function deleteProp(i){
+propertiesData.splice(i,1);
+display();
+}
+
+// CONTACT
+function contact(){
+alert("Call Broker: 7020253407");
+}
+
+// ADMIN LOGIN
+function adminLogin(){
+let pass = prompt("Enter Admin Password");
+if(pass==="shiv7833"){
+adminPanel.classList.remove("hidden");
+}else{
+alert("Wrong Password");
+}
+}
+
+display();
+
+</script>
+
+</body>
+</html>
