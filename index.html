@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,26 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shubh Vastu</title>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
 <style>
 body {margin:0; font-family:Arial; background:#f5f5f5;}
 header {background:#111; color:#fff; text-align:center; padding:15px;}
-
 .nav {display:flex; justify-content:center; gap:10px; margin-top:10px;}
 .nav button {background:#fff; color:#111; padding:8px 12px; border-radius:5px; border:none;}
-
 .slider img {width:100%; height:220px; object-fit:cover;}
-
 .container {padding:15px;}
-
-.card {background:#fff; padding:12px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+.card {background:#fff; padding:12px; margin:10px 0; border-radius:10px;}
 .gallery img {width:100%; margin-top:5px; border-radius:8px;}
-
-button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px; margin-top:5px;}
-
+button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px;}
 input, textarea {width:100%; padding:10px; margin:5px 0;}
-
 .hidden {display:none;}
-
 .whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%;}
 </style>
 </head>
@@ -48,13 +43,11 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 <div class="container">
 
-<!-- BUYER -->
 <div id="buyerPage">
 <h3>Buy Property</h3>
 <div id="properties"></div>
 </div>
 
-<!-- SELLER -->
 <div id="sellerPage" class="hidden">
 <h3>Sell Property</h3>
 <input id="title" placeholder="Property Title">
@@ -65,14 +58,13 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 <input id="sellerName" placeholder="Seller Name">
 <input id="sellerNumber" placeholder="Seller Phone Number">
 
-<input type="file" id="images" multiple>
+<input id="image" placeholder="Image URL (for now)">
 
 <button onclick="addProperty()">Submit Property</button>
 </div>
 
-<!-- ADMIN -->
 <div id="adminPanel" class="hidden">
-<h3>Admin Panel (Seller details visible only here)</h3>
+<h3>Admin Panel</h3>
 <div id="adminList"></div>
 </div>
 
@@ -81,6 +73,10 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 <a class="whatsapp" href="https://wa.me/917020253407">W</a>
 
 <script>
+// 🔑 SUPABASE CONFIG
+const supabaseUrl = "https://ftpabprrqlfkofzdtbdw.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 // PAGE SWITCH
 function showPage(page){
@@ -91,12 +87,10 @@ if(page==="buyer") buyerPage.classList.remove("hidden");
 if(page==="seller") sellerPage.classList.remove("hidden");
 }
 
-// SLIDER IMAGES
+// SLIDER
 let sliderImgs = [
 "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-"https://images.unsplash.com/photo-1570129477492-45c003edd2be",
-"https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"
+"https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
 ];
 
 let i=0;
@@ -105,67 +99,43 @@ slide.src = sliderImgs[i];
 i=(i+1)%sliderImgs.length;
 },2000);
 
-// SAMPLE DATA (flat, plot, office, farm)
-let propertiesData = [
-{
-title:"Modern Flat",
-price:"₹30,00,000",
-location:"Pune",
-desc:"2BHK modern flat",
-images:["https://images.unsplash.com/photo-1507089947368-19c1da9775ae"]
-},
-{
-title:"Open Plot",
-price:"₹15,00,000",
-location:"Nashik",
-desc:"Good investment plot",
-images:["https://images.unsplash.com/photo-1501785888041-af3ef285b470"]
-},
-{
-title:"Office Space",
-price:"₹60,00,000",
-location:"Mumbai",
-desc:"Commercial office",
-images:["https://images.unsplash.com/photo-1497366754035-f200968a6e72"]
-},
-{
-title:"Farm Land",
-price:"₹20,00,000",
-location:"Ahmednagar",
-desc:"Green farm land",
-images:["https://images.unsplash.com/photo-1500382017468-9049fed747ef"]
+// ADD PROPERTY (SAVE TO DATABASE)
+async function addProperty(){
+
+let { error } = await supabaseClient
+.from("properties")
+.insert([{
+title: title.value,
+price: price.value,
+location: location.value,
+desc: desc.value,
+sellerName: sellerName.value,
+sellerNumber: sellerNumber.value,
+images: image.value
+}]);
+
+if(error){
+alert("Error saving data");
+console.log(error);
+}else{
+alert("Property Added Successfully!");
+loadProperties();
 }
-];
-
-// ADD PROPERTY
-function addProperty(){
-let files = document.getElementById("images").files;
-let imgs=[];
-
-for(let f of files){
-imgs.push(URL.createObjectURL(f));
 }
 
-let p = {
-title:title.value,
-price:price.value,
-location:location.value,
-desc:desc.value,
-sellerName:sellerName.value,
-sellerNumber:sellerNumber.value,
-images:imgs
-};
+// LOAD PROPERTIES FROM DATABASE
+async function loadProperties(){
 
-propertiesData.push(p);
-display();
-alert("Property Added!");
-}
+let { data, error } = await supabaseClient
+.from("properties")
+.select("*")
+.order("created_at", { ascending: false });
 
-// DISPLAY
-function display(){
 let html="";
+let adminHTML="";
 
-propertiesData.forEach((p,i)=>{
+data.forEach((p,i)=>{
+
 html+=`
 <div class="card">
 <h4>${p.title}</h4>
@@ -174,35 +144,34 @@ html+=`
 <p>${p.desc}</p>
 
 <div class="gallery">
-${p.images.map(img=>`<img src="${img}">`).join("")}
+<img src="${p.images}">
 </div>
 
 <button onclick="contact()">Contact Broker</button>
 </div>`;
-});
 
-document.getElementById("properties").innerHTML = html;
-
-// ADMIN VIEW (seller details visible)
-let adminHTML="";
-
-propertiesData.forEach((p,i)=>{
 adminHTML+=`
 <div class="card">
 <h4>${p.title}</h4>
-<p>Seller: ${p.sellerName || "-"}</p>
-<p>Phone: ${p.sellerNumber || "-"}</p>
-<button onclick="deleteProp(${i})">Delete</button>
+<p>Seller: ${p.sellerName}</p>
+<p>Phone: ${p.sellerNumber}</p>
+<button onclick="deleteProp('${p.id}')">Delete</button>
 </div>`;
 });
 
+properties.innerHTML = html;
 adminList.innerHTML = adminHTML;
 }
 
-// DELETE
-function deleteProp(i){
-propertiesData.splice(i,1);
-display();
+// DELETE FROM DATABASE
+async function deleteProp(id){
+
+await supabaseClient
+.from("properties")
+.delete()
+.eq("id", id);
+
+loadProperties();
 }
 
 // CONTACT
@@ -220,7 +189,8 @@ alert("Wrong Password");
 }
 }
 
-display();
+// LOAD DATA ON START
+loadProperties();
 
 </script>
 
