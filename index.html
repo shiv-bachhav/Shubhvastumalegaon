@@ -58,7 +58,7 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 <input id="sellerName" placeholder="Seller Name">
 <input id="sellerNumber" placeholder="Seller Phone Number">
 
-<input type="file" id="imageFile">
+<input type="file" id="imageFile" multiple>
 
 <button onclick="addProperty()">Submit Property</button>
 </div>
@@ -70,18 +70,20 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 </div>
 
-<!-- WhatsApp Icon -->
+<!-- WhatsApp -->
 <a class="whatsapp" href="https://wa.me/917020253407" target="_blank">
 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg">
 </a>
 
 <script>
+
 // 🔑 SUPABASE
 const supabaseUrl = "https://ftpabprrqlfkofzdtbdw.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0cGFicHJycWxma29memR0YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjA5NTEsImV4cCI6MjA4OTU5Njk1MX0.il7QniFOhNUTfkJ3l7DEJ_iuYNjO4C7wKxzO1I8qAI0";
+
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-// PAGE SWITCH FIX
+// PAGE SWITCH
 function showPage(page){
 const buyerPage = document.getElementById("buyerPage");
 const sellerPage = document.getElementById("sellerPage");
@@ -93,7 +95,7 @@ if(page==="buyer") buyerPage.classList.remove("hidden");
 if(page==="seller") sellerPage.classList.remove("hidden");
 }
 
-// SLIDER FIX
+// SLIDER
 let sliderImgs = [
 "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
 "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
@@ -107,34 +109,38 @@ slide.src = sliderImgs[i];
 i=(i+1)%sliderImgs.length;
 },2000);
 
-// ADD PROPERTY (UPLOAD IMAGE + SAVE)
+// ADD PROPERTY (MULTIPLE IMAGE UPLOAD)
 async function addProperty(){
 
-let file = document.getElementById("imageFile").files[0];
+let files = document.getElementById("imageFile").files;
 
-if(!file){
-alert("Select image");
+if(files.length === 0){
+alert("Select at least 1 image");
 return;
 }
+
+let imageUrls = [];
+
+for(let file of files){
 
 let fileName = Date.now() + "-" + file.name;
 
-// upload image
-let { error: uploadError } = await supabaseClient.storage
+let { error } = await supabaseClient.storage
 .from("images")
 .upload(fileName, file);
 
-if(uploadError){
+if(error){
 alert("Image upload failed");
-console.log(uploadError);
+console.log(error);
 return;
 }
 
-// image URL
-let imageUrl = `https://ftpabprrqlfkofzdtbdw.supabase.co/storage/v1/object/public/images/${fileName}`;
+let url = `https://ftpabprrqlfkofzdtbdw.supabase.co/storage/v1/object/public/images/${fileName}`;
+imageUrls.push(url);
+}
 
-// save data
-let { error } = await supabaseClient
+// SAVE DATA
+let { error: dbError } = await supabaseClient
 .from("properties")
 .insert([{
 title: title.value,
@@ -143,12 +149,12 @@ location: location.value,
 desc: desc.value,
 sellerName: sellerName.value,
 sellerNumber: sellerNumber.value,
-images: imageUrl
+images: JSON.stringify(imageUrls)
 }]);
 
-if(error){
-alert("Error saving");
-console.log(error);
+if(dbError){
+alert("Error saving property");
+console.log(dbError);
 }else{
 alert("Property Added!");
 loadProperties();
@@ -172,15 +178,20 @@ return;
 }
 
 data.forEach(p=>{
+
+let images = JSON.parse(p.images);
+
 html+=`
 <div class="card">
 <h4>${p.title}</h4>
 <p>${p.price}</p>
 <p>${p.location}</p>
 <p>${p.desc}</p>
+
 <div class="gallery">
-<img src="${p.images}">
+${images.map(img => `<img src="${img}">`).join("")}
 </div>
+
 <button onclick="contact()">Contact Broker</button>
 </div>`;
 
