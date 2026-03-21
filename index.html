@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,7 +19,8 @@ header {background:#111; color:#fff; text-align:center; padding:15px;}
 button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px;}
 input, textarea {width:100%; padding:10px; margin:5px 0;}
 .hidden {display:none;}
-.whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%;}
+.whatsapp {position:fixed; bottom:20px; right:20px;}
+.whatsapp img {width:55px;}
 </style>
 </head>
 
@@ -58,7 +58,7 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 <input id="sellerName" placeholder="Seller Name">
 <input id="sellerNumber" placeholder="Seller Phone Number">
 
-<input id="image" placeholder="Image URL (for now)">
+<input type="file" id="imageFile">
 
 <button onclick="addProperty()">Submit Property</button>
 </div>
@@ -70,16 +70,22 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 </div>
 
-<a class="whatsapp" href="https://wa.me/917020253407">W</a>
+<!-- WhatsApp Icon -->
+<a class="whatsapp" href="https://wa.me/917020253407" target="_blank">
+<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg">
+</a>
 
 <script>
-// 🔑 SUPABASE CONFIG
+// 🔑 SUPABASE
 const supabaseUrl = "https://ftpabprrqlfkofzdtbdw.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0cGFicHJycWxma29memR0YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjA5NTEsImV4cCI6MjA4OTU5Njk1MX0.il7QniFOhNUTfkJ3l7DEJ_iuYNjO4C7wKxzO1I8qAI0";
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-// PAGE SWITCH
+// PAGE SWITCH FIX
 function showPage(page){
+const buyerPage = document.getElementById("buyerPage");
+const sellerPage = document.getElementById("sellerPage");
+
 buyerPage.classList.add("hidden");
 sellerPage.classList.add("hidden");
 
@@ -87,21 +93,47 @@ if(page==="buyer") buyerPage.classList.remove("hidden");
 if(page==="seller") sellerPage.classList.remove("hidden");
 }
 
-// SLIDER
+// SLIDER FIX
 let sliderImgs = [
 "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-"https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
+"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+"https://images.unsplash.com/photo-1570129477492-45c003edd2be"
 ];
 
 let i=0;
 setInterval(()=>{
+const slide = document.getElementById("slide");
 slide.src = sliderImgs[i];
 i=(i+1)%sliderImgs.length;
 },2000);
 
-// ADD PROPERTY (SAVE TO DATABASE)
+// ADD PROPERTY (UPLOAD IMAGE + SAVE)
 async function addProperty(){
 
+let file = document.getElementById("imageFile").files[0];
+
+if(!file){
+alert("Select image");
+return;
+}
+
+let fileName = Date.now() + "-" + file.name;
+
+// upload image
+let { error: uploadError } = await supabaseClient.storage
+.from("images")
+.upload(fileName, file);
+
+if(uploadError){
+alert("Image upload failed");
+console.log(uploadError);
+return;
+}
+
+// image URL
+let imageUrl = `https://ftpabprrqlfkofzdtbdw.supabase.co/storage/v1/object/public/images/${fileName}`;
+
+// save data
 let { error } = await supabaseClient
 .from("properties")
 .insert([{
@@ -111,22 +143,22 @@ location: location.value,
 desc: desc.value,
 sellerName: sellerName.value,
 sellerNumber: sellerNumber.value,
-images: image.value
+images: imageUrl
 }]);
 
 if(error){
-alert("Error saving data");
+alert("Error saving");
 console.log(error);
 }else{
-alert("Property Added Successfully!");
+alert("Property Added!");
 loadProperties();
 }
 }
 
-// LOAD PROPERTIES FROM DATABASE
+// LOAD DATA
 async function loadProperties(){
 
-let { data, error } = await supabaseClient
+let { data } = await supabaseClient
 .from("properties")
 .select("*")
 .order("created_at", { ascending: false });
@@ -134,19 +166,21 @@ let { data, error } = await supabaseClient
 let html="";
 let adminHTML="";
 
-data.forEach((p,i)=>{
+if(data.length === 0){
+properties.innerHTML = "<p>No properties yet</p>";
+return;
+}
 
+data.forEach(p=>{
 html+=`
 <div class="card">
 <h4>${p.title}</h4>
 <p>${p.price}</p>
 <p>${p.location}</p>
 <p>${p.desc}</p>
-
 <div class="gallery">
 <img src="${p.images}">
 </div>
-
 <button onclick="contact()">Contact Broker</button>
 </div>`;
 
@@ -163,14 +197,9 @@ properties.innerHTML = html;
 adminList.innerHTML = adminHTML;
 }
 
-// DELETE FROM DATABASE
+// DELETE
 async function deleteProp(id){
-
-await supabaseClient
-.from("properties")
-.delete()
-.eq("id", id);
-
+await supabaseClient.from("properties").delete().eq("id", id);
 loadProperties();
 }
 
@@ -179,17 +208,16 @@ function contact(){
 alert("Call Broker: 7020253407");
 }
 
-// ADMIN LOGIN
+// ADMIN
 function adminLogin(){
 let pass = prompt("Enter Admin Password");
 if(pass==="shiv7833"){
-adminPanel.classList.remove("hidden");
+document.getElementById("adminPanel").classList.remove("hidden");
 }else{
 alert("Wrong Password");
 }
 }
 
-// LOAD DATA ON START
 loadProperties();
 
 </script>
