@@ -1,26 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shubh Vastu</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<!-- Firebase COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <style>
 body {margin:0; font-family:Arial; background:#f5f5f5;}
 header {background:#111; color:#fff; text-align:center; padding:15px;}
 .nav {display:flex; justify-content:center; gap:10px; margin-top:10px;}
-.nav button {background:#fff; color:#111; padding:8px 12px; border-radius:5px; border:none;}
+.nav button {background:#fff; color:#111; padding:8px; border:none; border-radius:5px;}
 .slider img {width:100%; height:220px; object-fit:cover;}
 .container {padding:15px;}
-.card {background:#fff; padding:12px; margin:10px 0; border-radius:10px;}
+.card {background:#fff; padding:10px; margin:10px 0; border-radius:10px;}
 .gallery img {width:100%; margin-top:5px; border-radius:8px;}
-button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px;}
 input, textarea {width:100%; padding:10px; margin:5px 0;}
+button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px;}
 .hidden {display:none;}
-.whatsapp {position:fixed; bottom:20px; right:20px;}
-.whatsapp img {width:55px;}
+.whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%; font-size:20px; text-decoration:none;}
 </style>
 </head>
 
@@ -28,7 +29,7 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 <header>
 <h2>Shubh Vastu</h2>
-<p>Dipak Waman Bachhav | 7020253407</p>
+<p>Dipak Waman Bachhav | 7020253407 |shubhvastubrokerage@gmail.com </p>
 
 <div class="nav">
 <button onclick="showPage('buyer')">Buyer</button>
@@ -45,22 +46,23 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 <div id="buyerPage">
 <h3>Buy Property</h3>
-<div id="properties"></div>
+<div id="list"></div>
 </div>
 
 <div id="sellerPage" class="hidden">
 <h3>Sell Property</h3>
-<input id="title" placeholder="Property Title">
+
+<input id="title" placeholder="Title">
 <input id="price" placeholder="Price">
 <input id="location" placeholder="Location">
 <textarea id="desc" placeholder="Description"></textarea>
 
 <input id="sellerName" placeholder="Seller Name">
-<input id="sellerNumber" placeholder="Seller Phone Number">
+<input id="sellerNumber" placeholder="Seller Number">
 
-<input type="file" id="imageFile" multiple>
+<input type="file" id="images" multiple>
 
-<button onclick="addProperty()">Submit Property</button>
+<button onclick="addProperty()">Submit</button>
 </div>
 
 <div id="adminPanel" class="hidden">
@@ -70,33 +72,32 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 
 </div>
 
-<!-- WhatsApp -->
-<a class="whatsapp" href="https://wa.me/917020253407" target="_blank">
-<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg">
-</a>
+<a class="whatsapp" href="https://wa.me/917020253407">💬</a>
 
 <script>
 
-// 🔑 SUPABASE
-const supabaseUrl = "https://ftpabprrqlfkofzdtbdw.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0cGFicHJycWxma29memR0YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjA5NTEsImV4cCI6MjA4OTU5Njk1MX0.il7QniFOhNUTfkJ3l7DEJ_iuYNjO4C7wKxzO1I8qAI0";
+const firebaseConfig = {
+  apiKey: "AIzaSyA7dGHSLSmRyDNxvGb8uQ7O28UcmZ-w0xg",
+  authDomain: "shubh-vastu-brokerage.firebaseapp.com",
+  projectId: "shubh-vastu-brokerage",
+  storageBucket: "shubh-vastu-brokerage.firebasestorage.app",
+  messagingSenderId: "120954846627",
+  appId: "1:120954846627:web:c78450fabefd6560e1ee16"
+};
 
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+firebase.initializeApp(firebaseConfig);
 
-// PAGE SWITCH
-function showPage(page){
-const buyerPage = document.getElementById("buyerPage");
-const sellerPage = document.getElementById("sellerPage");
+const db = firebase.firestore();
+const storage = firebase.storage();
 
+function showPage(p){
 buyerPage.classList.add("hidden");
 sellerPage.classList.add("hidden");
-
-if(page==="buyer") buyerPage.classList.remove("hidden");
-if(page==="seller") sellerPage.classList.remove("hidden");
+if(p==="buyer") buyerPage.classList.remove("hidden");
+if(p==="seller") sellerPage.classList.remove("hidden");
 }
 
-// SLIDER
-let sliderImgs = [
+let imgs = [
 "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
 "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
 "https://images.unsplash.com/photo-1570129477492-45c003edd2be"
@@ -104,132 +105,81 @@ let sliderImgs = [
 
 let i=0;
 setInterval(()=>{
-const slide = document.getElementById("slide");
-slide.src = sliderImgs[i];
-i=(i+1)%sliderImgs.length;
+slide.src = imgs[i];
+i=(i+1)%imgs.length;
 },2000);
 
-// ADD PROPERTY (MULTIPLE IMAGE UPLOAD)
 async function addProperty(){
-
-let files = document.getElementById("imageFile").files;
-
+try {
+let files = document.getElementById("images").files;
 if(files.length === 0){
-alert("Select at least 1 image");
+alert("Please select at least 1 image");
 return;
 }
-
-let imageUrls = [];
-
+let urls=[];
 for(let file of files){
-
-let fileName = Date.now() + "-" + file.name;
-
-let { error } = await supabaseClient.storage
-.from("images")
-.upload(fileName, file);
-
-if(error){
-alert("Image upload failed");
-console.log(error);
-return;
+let storageRef = storage.ref().child("images/" + Date.now() + "_" + file.name);
+await storageRef.put(file);
+let downloadURL = await storageRef.getDownloadURL();
+urls.push(downloadURL);
 }
-
-let url = `https://ftpabprrqlfkofzdtbdw.supabase.co/storage/v1/object/public/images/${fileName}`;
-imageUrls.push(url);
-}
-
-// SAVE DATA
-let { error: dbError } = await supabaseClient
-.from("properties")
-.insert([{
+await db.collection("properties").add({
 title: title.value,
 price: price.value,
 location: location.value,
 desc: desc.value,
 sellerName: sellerName.value,
 sellerNumber: sellerNumber.value,
-images: JSON.stringify(imageUrls)
-}]);
-
-if(dbError){
-alert("Error saving property");
-console.log(dbError);
-}else{
-alert("Property Added!");
-loadProperties();
+images: urls
+});
+alert("Property Added");
+title.value=""; price.value=""; location.value=""; desc.value="";
+sellerName.value=""; sellerNumber.value=""; images.value="";
+} catch(error){
+console.error(error);
+alert("Error: " + error.message);
 }
 }
 
-// LOAD DATA
-async function loadProperties(){
-
-let { data } = await supabaseClient
-.from("properties")
-.select("*")
-.order("created_at", { ascending: false });
-
-let html="";
-let adminHTML="";
-
-if(data.length === 0){
-properties.innerHTML = "<p>No properties yet</p>";
-return;
-}
-
-data.forEach(p=>{
-
-let images = JSON.parse(p.images);
-
-html+=`
+db.collection("properties").onSnapshot(snapshot=>{
+let html=""; let adminHTML="";
+snapshot.forEach(doc=>{
+let p = doc.data();
+html += `
 <div class="card">
 <h4>${p.title}</h4>
 <p>${p.price}</p>
 <p>${p.location}</p>
 <p>${p.desc}</p>
-
 <div class="gallery">
-${images.map(img => `<img src="${img}">`).join("")}
+${p.images.map(img=>`<img src="${img}">`).join("")}
 </div>
-
-<button onclick="contact()">Contact Broker</button>
+<a href="https://wa.me/917020253407">Contact on WhatsApp</a>
 </div>`;
-
-adminHTML+=`
+adminHTML += `
 <div class="card">
 <h4>${p.title}</h4>
-<p>Seller: ${p.sellerName}</p>
-<p>Phone: ${p.sellerNumber}</p>
-<button onclick="deleteProp('${p.id}')">Delete</button>
+<p>${p.sellerName}</p>
+<p>${p.sellerNumber}</p>
+<button onclick="deleteProperty('${doc.id}')">Delete</button>
 </div>`;
 });
-
-properties.innerHTML = html;
+list.innerHTML = html;
 adminList.innerHTML = adminHTML;
+});
+
+function deleteProperty(id){
+db.collection("properties").doc(id).delete();
 }
 
-// DELETE
-async function deleteProp(id){
-await supabaseClient.from("properties").delete().eq("id", id);
-loadProperties();
-}
-
-// CONTACT
-function contact(){
-alert("Call Broker: 7020253407");
-}
-
-// ADMIN
 function adminLogin(){
-let pass = prompt("Enter Admin Password");
+let pass = prompt("Password");
 if(pass==="shiv7833"){
-document.getElementById("adminPanel").classList.remove("hidden");
+adminPanel.classList.remove("hidden");
 }else{
 alert("Wrong Password");
 }
 }
-
-loadProperties();
 
 </script>
 
