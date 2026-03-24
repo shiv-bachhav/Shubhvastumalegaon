@@ -1,186 +1,201 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shubh Vastu</title>
 
-<!-- Firebase COMPAT -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 body {margin:0; font-family:Arial; background:#f5f5f5;}
-header {background:#111; color:#fff; text-align:center; padding:15px;}
-.nav {display:flex; justify-content:center; gap:10px; margin-top:10px;}
-.nav button {background:#fff; color:#111; padding:8px; border:none; border-radius:5px;}
-.slider img {width:100%; height:220px; object-fit:cover;}
-.container {padding:15px;}
-.card {background:#fff; padding:10px; margin:10px 0; border-radius:10px;}
-.gallery img {width:100%; margin-top:5px; border-radius:8px;}
-input, textarea {width:100%; padding:10px; margin:5px 0;}
-button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px;}
-.hidden {display:none;}
-.whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%; font-size:20px; text-decoration:none;}
+header {background:#111; color:#fff; padding:15px; text-align:center;}
+.container {padding:20px;}
+.card {background:#fff; padding:15px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);} 
+input, textarea, select {width:100%; padding:10px; margin:5px 0;}
+button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px; cursor:pointer; margin-top:5px;}
+.gallery {display:flex; overflow:hidden;}
+.gallery img {width:100%; height:200px; object-fit:cover;}
+.property-img {width:100%; border-radius:10px; margin-top:10px;}
+.loader {display:none; text-align:center; font-size:18px;}
+.admin-panel {display:none; background:#222; color:#fff; padding:10px; margin-bottom:10px;}
 </style>
 </head>
-
 <body>
 
 <header>
-<h2>Shubh Vastu</h2>
-<p>Dipak Waman Bachhav | 7020253407 |shubhvastubrokerage@gmail.com </p>
-
-<div class="nav">
-<button onclick="showPage('buyer')">Buyer</button>
-<button onclick="showPage('seller')">Seller</button>
-<button onclick="adminLogin()">Admin</button>
-</div>
+<h1>Shubh Vastu</h1>
 </header>
-
-<div class="slider">
-<img id="slide">
-</div>
 
 <div class="container">
 
-<div id="buyerPage">
-<h3>Buy Property</h3>
-<div id="list"></div>
+<div class="admin-panel" id="adminPanel">
+<h3>Admin Dashboard</h3>
+<p>You can manage properties below</p>
 </div>
 
-<div id="sellerPage" class="hidden">
-<h3>Sell Property</h3>
+<h2>Admin Login</h2>
+<input id="adminPass" placeholder="Enter Admin Password">
+<button onclick="adminLogin()">Login</button>
 
-<input id="title" placeholder="Title">
+<h2>Image Slider</h2>
+<div class="gallery">
+<img id="slider" src="https://images.unsplash.com/photo-1560518883-ce09059eeffa">
+</div>
+
+<h2>Search</h2>
+<input id="search" placeholder="Search by title or city" onkeyup="displayProperties()">
+
+<h2>Sell Property</h2>
+<input id="title" placeholder="Property Title">
+
+<select id="type">
+<option value="sale">For Sale</option>
+<option value="rent">For Rent</option>
+</select>
+
+<input id="city" placeholder="City">
+<input id="location" placeholder="Full Location">
 <input id="price" placeholder="Price">
-<input id="location" placeholder="Location">
+<input id="area" placeholder="Area (sq ft)">
+
 <textarea id="desc" placeholder="Description"></textarea>
 
 <input id="sellerName" placeholder="Seller Name">
-<input id="sellerNumber" placeholder="Seller Number">
+<input id="sellerPhone" placeholder="Seller Phone">
 
 <input type="file" id="images" multiple>
 
-<button onclick="addProperty()">Submit</button>
-</div>
+<button onclick="addProperty()">Upload Property</button>
 
-<div id="adminPanel" class="hidden">
-<h3>Admin Panel</h3>
-<div id="adminList"></div>
-</div>
+<div class="loader" id="loader">Uploading...</div>
+
+<h2>Buy Property</h2>
+<div id="propertyList"></div>
 
 </div>
-
-<a class="whatsapp" href="https://wa.me/917020253407">💬</a>
 
 <script>
+const supabaseClient = supabase.createClient(
+"https://ftpabprrqlfkofzdtbdw.supabase.co",
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0cGFicHJycWxma29memR0YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjA5NTEsImV4cCI6MjA4OTU5Njk1MX0.il7QniFOhNUTfkJ3l7DEJ_iuYNjO4C7wKxzO1I8qAI0
+);
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA7dGHSLSmRyDNxvGb8uQ7O28UcmZ-w0xg",
-  authDomain: "shubh-vastu-brokerage.firebaseapp.com",
-  projectId: "shubh-vastu-brokerage",
-  storageBucket: "shubh-vastu-brokerage.firebasestorage.app",
-  messagingSenderId: "120954846627",
-  appId: "1:120954846627:web:c78450fabefd6560e1ee16"
-};
+let isAdmin = false;
 
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.firestore();
-const storage = firebase.storage();
-
-function showPage(p){
-buyerPage.classList.add("hidden");
-sellerPage.classList.add("hidden");
-if(p==="buyer") buyerPage.classList.remove("hidden");
-if(p==="seller") sellerPage.classList.remove("hidden");
-}
-
-let imgs = [
-"https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
-"https://images.unsplash.com/photo-1570129477492-45c003edd2be"
-];
-
-let i=0;
-setInterval(()=>{
-slide.src = imgs[i];
-i=(i+1)%imgs.length;
-},2000);
-
-async function addProperty(){
-try {
-let files = document.getElementById("images").files;
-if(files.length === 0){
-alert("Please select at least 1 image");
-return;
-}
-let urls=[];
-for(let file of files){
-let storageRef = storage.ref().child("images/" + Date.now() + "_" + file.name);
-await storageRef.put(file);
-let downloadURL = await storageRef.getDownloadURL();
-urls.push(downloadURL);
-}
-await db.collection("properties").add({
-title: title.value,
-price: price.value,
-location: location.value,
-desc: desc.value,
-sellerName: sellerName.value,
-sellerNumber: sellerNumber.value,
-images: urls
-});
-alert("Property Added");
-title.value=""; price.value=""; location.value=""; desc.value="";
-sellerName.value=""; sellerNumber.value=""; images.value="";
-} catch(error){
-console.error(error);
-alert("Error: " + error.message);
-}
-}
-
-db.collection("properties").onSnapshot(snapshot=>{
-let html=""; let adminHTML="";
-snapshot.forEach(doc=>{
-let p = doc.data();
-html += `
-<div class="card">
-<h4>${p.title}</h4>
-<p>${p.price}</p>
-<p>${p.location}</p>
-<p>${p.desc}</p>
-<div class="gallery">
-${p.images.map(img=>`<img src="${img}">`).join("")}
-</div>
-<a href="https://wa.me/917020253407">Contact on WhatsApp</a>
-</div>`;
-adminHTML += `
-<div class="card">
-<h4>${p.title}</h4>
-<p>${p.sellerName}</p>
-<p>${p.sellerNumber}</p>
-<button onclick="deleteProperty('${doc.id}')">Delete</button>
-</div>`;
-});
-list.innerHTML = html;
-adminList.innerHTML = adminHTML;
-});
-
-function deleteProperty(id){
-db.collection("properties").doc(id).delete();
-}
-
-function adminLogin(){
-let pass = prompt("Password");
-if(pass==="shiv7833"){
-adminPanel.classList.remove("hidden");
-}else{
+function adminLogin() {
+let pass = document.getElementById('adminPass').value;
+if(pass === "shiv7833") {
+isAdmin = true;
+document.getElementById('adminPanel').style.display = 'block';
+alert("Admin Login Success");
+displayProperties();
+} else {
 alert("Wrong Password");
 }
 }
 
+// Slider
+let images = [
+"https://images.unsplash.com/photo-1560518883-ce09059eeffa",
+"https://images.unsplash.com/photo-1572120360610-d971b9d7767c",
+"https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"
+];
+let index = 0;
+setInterval(()=>{
+index = (index+1)%images.length;
+document.getElementById('slider').src = images[index];
+},3000);
+
+async function addProperty() {
+document.getElementById('loader').style.display='block';
+
+let title = document.getElementById('title').value;
+let type = document.getElementById('type').value;
+let city = document.getElementById('city').value;
+let location = document.getElementById('location').value;
+let price = document.getElementById('price').value;
+let area = document.getElementById('area').value;
+let desc = document.getElementById('desc').value;
+let sellerName = document.getElementById('sellerName').value;
+let sellerPhone = document.getElementById('sellerPhone').value;
+let files = document.getElementById('images').files;
+
+let imageUrls = [];
+
+for (let file of files) {
+let fileName = Date.now() + file.name;
+
+let { error } = await supabaseClient.storage
+.from('property-images')
+.upload(fileName, file);
+
+if (error) {
+alert("Image upload error: " + error.message);
+}
+
+let { data } = supabaseClient.storage
+.from('property-images')
+.getPublicUrl(fileName);
+
+imageUrls.push(data.publicUrl);
+}
+
+let { error: insertError } = await supabaseClient.from('properties').insert([
+{ title, type, city, location, price, area, desc, sellerName, sellerPhone, images: imageUrls }
+]);
+
+if(insertError){
+alert("Database error: " + insertError.message);
+}
+
+
+document.getElementById('loader').style.display='none';
+alert("Uploaded Successfully");
+displayProperties();
+}
+
+async function displayProperties() {
+let search = document.getElementById('search').value.toLowerCase();
+let { data } = await supabaseClient.from('properties').select('*');
+
+let list = document.getElementById('propertyList');
+list.innerHTML = '';
+
+(data || []).forEach(p => {
+if(p.title.toLowerCase().includes(search) || (p.city && p.city.toLowerCase().includes(search))) {
+let div = document.createElement('div');
+div.className='card';
+
+let adminInfo = isAdmin ? `<p><b>${p.sellerName} - ${p.sellerPhone}</b></p>` : '';
+let adminBtns = isAdmin ? `<button onclick="deleteProperty(${p.id})">Delete</button>` : '';
+
+let whatsapp = `<a href="https://wa.me/917020253407"><button>WhatsApp</button></a>`;
+
+
+div.innerHTML = `
+<h3>${p.title}</h3>
+<p>Type: ${p.type} | City: ${p.city}</p>
+<p>Location: ${p.location}</p>
+<p>Price: ${p.price} | Area: ${p.area}</p>
+<p>${p.desc}</p>
+${adminInfo}
+${(p.images||[]).map(i=>`<img src="${i}" class="property-img">`).join('')}
+${whatsapp}
+${adminBtns}
+`;
+
+list.appendChild(div);
+}
+});
+}
+
+async function deleteProperty(id) {
+await supabaseClient.from('properties').delete().eq('id', id);
+displayProperties();
+}
+
+displayProperties();
 </script>
 
 </body>
