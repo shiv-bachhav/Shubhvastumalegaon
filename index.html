@@ -9,194 +9,177 @@
 
 <style>
 body {margin:0; font-family:Arial; background:#f5f5f5;}
-header {background:#111; color:#fff; padding:15px; text-align:center;}
-.container {padding:20px;}
-.card {background:#fff; padding:15px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);} 
-input, textarea, select {width:100%; padding:10px; margin:5px 0;}
-button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px; cursor:pointer; margin-top:5px;}
-.gallery {display:flex; overflow:hidden;}
-.gallery img {width:100%; height:200px; object-fit:cover;}
-.property-img {width:100%; border-radius:10px; margin-top:10px;}
-.loader {display:none; text-align:center; font-size:18px;}
-.admin-panel {display:none; background:#222; color:#fff; padding:10px; margin-bottom:10px;}
+header {background:#111; color:#fff; text-align:center; padding:15px;}
+
+.nav {display:flex; justify-content:center; gap:10px; margin-top:10px;}
+.nav button {background:#fff; color:#111; padding:8px 12px; border-radius:5px; border:none;}
+
+.slider img {width:100%; height:220px; object-fit:cover;}
+
+.container {padding:15px;}
+
+.card {background:#fff; padding:12px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+.gallery img {width:100%; margin-top:5px; border-radius:8px;}
+
+button {padding:10px; background:#111; color:#fff; border:none; border-radius:5px; margin-top:5px;}
+
+input, textarea {width:100%; padding:10px; margin:5px 0;}
+
+.hidden {display:none;}
+
+.whatsapp {position:fixed; bottom:20px; right:20px; background:green; color:#fff; padding:15px; border-radius:50%;}
 </style>
 </head>
+
 <body>
 
 <header>
-<h1>Shubh Vastu</h1>
+<h2>Shubh Vastu</h2>
+<p>Dipak Waman Bachhav | 7020253407</p>
+
+<div class="nav">
+<button onclick="showPage('buyer')">Buyer</button>
+<button onclick="showPage('seller')">Seller</button>
+<button onclick="adminLogin()">Admin</button>
+</div>
 </header>
+
+<div class="slider">
+<img id="slide">
+</div>
 
 <div class="container">
 
-<div class="admin-panel" id="adminPanel">
-<h3>Admin Dashboard</h3>
-<p>You can manage properties below</p>
+<div id="buyerPage">
+<h3>Buy Property</h3>
+<div id="properties"></div>
 </div>
 
-<h2>Admin Login</h2>
-<input id="adminPass" placeholder="Enter Admin Password">
-<button onclick="adminLogin()">Login</button>
-
-<h2>Image Slider</h2>
-<div class="gallery">
-<img id="slider" src="https://images.unsplash.com/photo-1560518883-ce09059eeffa">
-</div>
-
-<h2>Search</h2>
-<input id="search" placeholder="Search by title or city" onkeyup="displayProperties()">
-
-<h2>Sell Property</h2>
+<div id="sellerPage" class="hidden">
+<h3>Sell Property</h3>
 <input id="title" placeholder="Property Title">
-
-<select id="type">
-<option value="sale">For Sale</option>
-<option value="rent">For Rent</option>
-</select>
-
-<input id="city" placeholder="City">
-<input id="location" placeholder="Full Location">
 <input id="price" placeholder="Price">
-<input id="area" placeholder="Area (sq ft)">
-
+<input id="location" placeholder="Location">
 <textarea id="desc" placeholder="Description"></textarea>
 
 <input id="sellerName" placeholder="Seller Name">
-<input id="sellerPhone" placeholder="Seller Phone">
+<input id="sellerNumber" placeholder="Seller Phone Number">
 
 <input type="file" id="images" multiple>
 
-<button onclick="addProperty()">Upload Property</button>
+<button onclick="addProperty()">Submit Property</button>
+</div>
 
-<div class="loader" id="loader">Uploading...</div>
-
-<h2>Buy Property</h2>
-<div id="propertyList"></div>
+<div id="adminPanel" class="hidden">
+<h3>Admin Panel</h3>
+<div id="adminList"></div>
+</div>
 
 </div>
 
+<a class="whatsapp" href="https://wa.me/917020253407">W</a>
+
 <script>
-const supabaseClient = supabase.createClient(
-"https://ftpabprrqlfkofzdtbdw.supabase.co",
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0cGFicHJycWxma29memR0YmR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjA5NTEsImV4cCI6MjA4OTU5Njk1MX0.il7QniFOhNUTfkJ3l7DEJ_iuYNjO4C7wKxzO1I8qAI0
-);
 
-let isAdmin = false;
+const SUPABASE_URL = "https://ypqjppyrzegbcalsyodj.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcWpwcHlyemVnYmNhbHN5b2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTY3MjMsImV4cCI6MjA5MDc5MjcyM30.Pv3ijqgsMDKntjLTlXSkFzARS0Any3ruu8czuC6CKXA";
 
-function adminLogin() {
-let pass = document.getElementById('adminPass').value;
-if(pass === "shiv7833") {
-isAdmin = true;
-document.getElementById('adminPanel').style.display = 'block';
-alert("Admin Login Success");
-displayProperties();
-} else {
-alert("Wrong Password");
-}
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function showPage(page){
+buyerPage.classList.add("hidden");
+sellerPage.classList.add("hidden");
+if(page==="buyer") buyerPage.classList.remove("hidden");
+if(page==="seller") sellerPage.classList.remove("hidden");
 }
 
-// Slider
-let images = [
-"https://images.unsplash.com/photo-1560518883-ce09059eeffa",
-"https://images.unsplash.com/photo-1572120360610-d971b9d7767c",
-"https://images.unsplash.com/photo-1502672260266-1c1ef2d93688"
-];
-let index = 0;
-setInterval(()=>{
-index = (index+1)%images.length;
-document.getElementById('slider').src = images[index];
-},3000);
+async function loadProperties(){
+let { data, error } = await supabase.from("properties").select("*");
+if(error){console.log(error);return;}
+display(data);
+}
 
-async function addProperty() {
-document.getElementById('loader').style.display='block';
-
-let title = document.getElementById('title').value;
-let type = document.getElementById('type').value;
-let city = document.getElementById('city').value;
-let location = document.getElementById('location').value;
-let price = document.getElementById('price').value;
-let area = document.getElementById('area').value;
-let desc = document.getElementById('desc').value;
-let sellerName = document.getElementById('sellerName').value;
-let sellerPhone = document.getElementById('sellerPhone').value;
-let files = document.getElementById('images').files;
-
+async function addProperty(){
+let files = document.getElementById("images").files;
 let imageUrls = [];
 
-for (let file of files) {
-let fileName = Date.now() + file.name;
-
-let { error } = await supabaseClient.storage
-.from('property-images')
-.upload(fileName, file);
-
-if (error) {
-alert("Image upload error: " + error.message);
+for(let file of files){
+let fileName = Date.now() + "-" + file.name;
+let { error } = await supabase.storage.from("property-images").upload(fileName, file);
+if(error){alert("Image upload failed");return;}
+let publicURL = `${SUPABASE_URL}/storage/v1/object/public/property-images/${fileName}`;
+imageUrls.push(publicURL);
 }
 
-let { data } = supabaseClient.storage
-.from('property-images')
-.getPublicUrl(fileName);
+let { error } = await supabase.from("properties").insert([{
+title: title.value,
+price: price.value,
+location: location.value,
+desc: desc.value,
+seller_name: sellerName.value,
+seller_number: sellerNumber.value,
+images: imageUrls
+}]);
 
-imageUrls.push(data.publicUrl);
+if(error){alert("Error saving data");console.log(error);} 
+else {alert("Property Added!");loadProperties();}
 }
 
-let { error: insertError } = await supabaseClient.from('properties').insert([
-{ title, type, city, location, price, area, desc, sellerName, sellerPhone, images: imageUrls }
-]);
-
-if(insertError){
-alert("Database error: " + insertError.message);
-}
-
-
-document.getElementById('loader').style.display='none';
-alert("Uploaded Successfully");
-displayProperties();
-}
-
-async function displayProperties() {
-let search = document.getElementById('search').value.toLowerCase();
-let { data } = await supabaseClient.from('properties').select('*');
-
-let list = document.getElementById('propertyList');
-list.innerHTML = '';
-
-(data || []).forEach(p => {
-if(p.title.toLowerCase().includes(search) || (p.city && p.city.toLowerCase().includes(search))) {
-let div = document.createElement('div');
-div.className='card';
-
-let adminInfo = isAdmin ? `<p><b>${p.sellerName} - ${p.sellerPhone}</b></p>` : '';
-let adminBtns = isAdmin ? `<button onclick="deleteProperty(${p.id})">Delete</button>` : '';
-
-let whatsapp = `<a href="https://wa.me/917020253407"><button>WhatsApp</button></a>`;
-
-
-div.innerHTML = `
-<h3>${p.title}</h3>
-<p>Type: ${p.type} | City: ${p.city}</p>
-<p>Location: ${p.location}</p>
-<p>Price: ${p.price} | Area: ${p.area}</p>
+function display(properties){
+let html="";
+properties.forEach((p)=>{
+html+=`<div class="card">
+<h4>${p.title}</h4>
+<p>${p.price}</p>
+<p>${p.location}</p>
 <p>${p.desc}</p>
-${adminInfo}
-${(p.images||[]).map(i=>`<img src="${i}" class="property-img">`).join('')}
-${whatsapp}
-${adminBtns}
-`;
-
-list.appendChild(div);
-}
+<div class="gallery">${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
+<button onclick="contact()">Contact Broker</button>
+</div>`;
 });
+
+document.getElementById("properties").innerHTML = html;
+
+let adminHTML="";
+properties.forEach((p)=>{
+adminHTML+=`<div class="card">
+<h4>${p.title}</h4>
+<p>Seller: ${p.seller_name || "-"}</p>
+<p>Phone: ${p.seller_number || "-"}</p>
+<button onclick="deleteProp('${p.id}')">Delete</button>
+</div>`;
+});
+
+adminList.innerHTML = adminHTML;
 }
 
-async function deleteProperty(id) {
-await supabaseClient.from('properties').delete().eq('id', id);
-displayProperties();
+async function deleteProp(id){
+let { error } = await supabase.from("properties").delete().eq("id", id);
+if(error){alert("Delete failed");} else {loadProperties();}
 }
 
-displayProperties();
+function contact(){alert("Call Broker: 7020253407");}
+
+function adminLogin(){
+let pass = prompt("Enter Admin Password");
+if(pass==="shiv7833"){adminPanel.classList.remove("hidden");}
+else{alert("Wrong Password");}
+}
+
+let sliderImgs = [
+"https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+"https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+"https://images.unsplash.com/photo-1570129477492-45c003edd2be",
+"https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"
+];
+
+let i=0;
+setInterval(()=>{slide.src = sliderImgs[i];i=(i+1)%sliderImgs.length;},2000);
+
+loadProperties();
+
 </script>
 
 </body>
 </html>
+
