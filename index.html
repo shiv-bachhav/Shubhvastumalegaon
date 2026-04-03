@@ -96,9 +96,19 @@ if(page==="seller") sellerPage.classList.remove("hidden");
 
 // LOAD DATA
 async function loadProperties(){
-let { data, error } = await sb.from("properties").select("*");
-if(error){console.log(error);return;}
-display(data);
+let { data, error } = await sb
+.from("properties")
+.select("*")
+.order("id", { ascending: false });
+
+console.log("DATA:", data); // debug
+
+if(error){
+console.log(error);
+return;
+}
+
+display(data || []);
 }
 
 // ADD PROPERTY
@@ -137,12 +147,15 @@ alert("Error saving data");
 console.log(error);
 }else{
 alert("Property Added!");
-loadProperties();
+setTimeout(loadProperties, 1000);
 }
 }
 
 // DISPLAY
 function display(properties){
+
+document.getElementById("properties").innerHTML = ""; // clear first
+
 let html="";
 
 properties.forEach((p)=>{
@@ -154,7 +167,7 @@ html+=`
 <p>${p.desc}</p>
 
 <div class="gallery">
-${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+${(p.images || []).map(img=>`<img src="${img}">`).join("")}
 </div>
 
 <button onclick="contact()">Contact Broker</button>
@@ -163,6 +176,21 @@ ${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
 
 document.getElementById("properties").innerHTML = html;
 
+// ADMIN
+let adminHTML="";
+
+properties.forEach((p)=>{
+adminHTML+=`
+<div class="card">
+<h4>${p.title}</h4>
+<p>Seller: ${p.seller_name || "-"}</p>
+<p>Phone: ${p.seller_number || "-"}</p>
+<button onclick="deleteProp('${p.id}')">Delete</button>
+</div>`;
+});
+
+adminList.innerHTML = adminHTML;
+}
 // ADMIN
 let adminHTML="";
 
