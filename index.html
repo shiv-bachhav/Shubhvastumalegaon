@@ -84,8 +84,9 @@ input, textarea {width:100%; padding:10px; margin:5px 0;}
 const SUPABASE_URL = "https://ypqjppyrzegbcalsyodj.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcWpwcHlyemVnYmNhbHN5b2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTY3MjMsImV4cCI6MjA5MDc5MjcyM30.Pv3ijqgsMDKntjLTlXSkFzARS0Any3ruu8czuC6CKXA";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// PAGE SWITCH
 function showPage(page){
 buyerPage.classList.add("hidden");
 sellerPage.classList.add("hidden");
@@ -93,25 +94,35 @@ if(page==="buyer") buyerPage.classList.remove("hidden");
 if(page==="seller") sellerPage.classList.remove("hidden");
 }
 
+// LOAD DATA
 async function loadProperties(){
-let { data, error } = await supabase.from("properties").select("*");
+let { data, error } = await sb.from("properties").select("*");
 if(error){console.log(error);return;}
 display(data);
 }
 
+// ADD PROPERTY
 async function addProperty(){
 let files = document.getElementById("images").files;
 let imageUrls = [];
 
 for(let file of files){
 let fileName = Date.now() + "-" + file.name;
-let { error } = await supabase.storage.from("property-images").upload(fileName, file);
-if(error){alert("Image upload failed");return;}
+
+let { error } = await sb.storage
+.from("property-images")
+.upload(fileName, file);
+
+if(error){
+alert("Image upload failed");
+return;
+}
+
 let publicURL = `${SUPABASE_URL}/storage/v1/object/public/property-images/${fileName}`;
 imageUrls.push(publicURL);
 }
 
-let { error } = await supabase.from("properties").insert([{
+let { error } = await sb.from("properties").insert([{
 title: title.value,
 price: price.value,
 location: location.value,
@@ -121,28 +132,43 @@ seller_number: sellerNumber.value,
 images: imageUrls
 }]);
 
-if(error){alert("Error saving data");console.log(error);} 
-else {alert("Property Added!");loadProperties();}
+if(error){
+alert("Error saving data");
+console.log(error);
+}else{
+alert("Property Added!");
+loadProperties();
+}
 }
 
+// DISPLAY
 function display(properties){
 let html="";
+
 properties.forEach((p)=>{
-html+=`<div class="card">
+html+=`
+<div class="card">
 <h4>${p.title}</h4>
 <p>${p.price}</p>
 <p>${p.location}</p>
 <p>${p.desc}</p>
-<div class="gallery">${(p.images||[]).map(img=>`<img src="${img}">`).join("")}</div>
+
+<div class="gallery">
+${(p.images||[]).map(img=>`<img src="${img}">`).join("")}
+</div>
+
 <button onclick="contact()">Contact Broker</button>
 </div>`;
 });
 
 document.getElementById("properties").innerHTML = html;
 
+// ADMIN
 let adminHTML="";
+
 properties.forEach((p)=>{
-adminHTML+=`<div class="card">
+adminHTML+=`
+<div class="card">
 <h4>${p.title}</h4>
 <p>Seller: ${p.seller_name || "-"}</p>
 <p>Phone: ${p.seller_number || "-"}</p>
@@ -153,19 +179,32 @@ adminHTML+=`<div class="card">
 adminList.innerHTML = adminHTML;
 }
 
+// DELETE
 async function deleteProp(id){
-let { error } = await supabase.from("properties").delete().eq("id", id);
-if(error){alert("Delete failed");} else {loadProperties();}
+let { error } = await sb.from("properties").delete().eq("id", id);
+if(error){
+alert("Delete failed");
+}else{
+loadProperties();
+}
 }
 
-function contact(){alert("Call Broker: 7020253407");}
+// CONTACT
+function contact(){
+alert("Call Broker: 7020253407");
+}
 
+// ADMIN LOGIN
 function adminLogin(){
 let pass = prompt("Enter Admin Password");
-if(pass==="shiv7833"){adminPanel.classList.remove("hidden");}
-else{alert("Wrong Password");}
+if(pass==="shiv7833"){
+adminPanel.classList.remove("hidden");
+}else{
+alert("Wrong Password");
+}
 }
 
+// SLIDER
 let sliderImgs = [
 "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
 "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
@@ -174,8 +213,12 @@ let sliderImgs = [
 ];
 
 let i=0;
-setInterval(()=>{slide.src = sliderImgs[i];i=(i+1)%sliderImgs.length;},2000);
+setInterval(()=>{
+slide.src = sliderImgs[i];
+i=(i+1)%sliderImgs.length;
+},2000);
 
+// START
 loadProperties();
 
 </script>
